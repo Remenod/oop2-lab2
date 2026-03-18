@@ -4,7 +4,10 @@
 #include <fstream>
 #include <string>
 #include <memory>
-#include "lib/tinyexpr.h"
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include "tinyexpr.h"
 
 typedef std::function<double(double)> mathfunc;
 

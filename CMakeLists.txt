@@ -15,6 +15,11 @@ target_compile_options(app PRIVATE
     -O2 -Wall -Wextra
 )
 
+target_include_directories(app PRIVATE
+    include
+    lib
+)
+
 target_compile_options(app PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-Wno-array-bounds>
 )
