@@ -20,6 +20,25 @@ Component DrawUI()
 
     auto container = Container::Vertical({});
 
+    ButtonOption btn_option;
+    btn_option.transform = [](const EntryState &s)
+    {
+        auto element = text(s.label) //
+                       | center      //
+                       | flex;
+
+        if (s.active)
+            element = element //
+                      | bold;
+
+        if (s.focused)
+            element = element //
+                      | inverted;
+
+        return element //
+               | border;
+    };
+
     for (const auto &row_labels : labels)
     {
         auto row_container = Container::Horizontal({});
@@ -30,7 +49,8 @@ Component DrawUI()
                 [label]
                 {
                     //
-                }));
+                },
+                btn_option));
 
         container->Add(row_container);
     }
@@ -39,15 +59,16 @@ Component DrawUI()
         container,
         [container]
         {
-            auto display = vbox({
-                               text(result_text)            //
-                                   | color(Color::GrayDark) //
-                                   | align_right,
-                               text(input_text)             //
-                                   | size(HEIGHT, EQUAL, 1) //
-                                   | align_right            //
-                                   | bold,
-                           })             //
+            auto display = vbox(
+                               {
+                                   text(result_text)            //
+                                       | color(Color::GrayDark) //
+                                       | align_right,
+                                   text(input_text)             //
+                                       | size(HEIGHT, EQUAL, 1) //
+                                       | align_right            //
+                                       | bold,
+                               })         //
                            | borderDouble //
                            | color(Color::BlueLight);
 
@@ -56,13 +77,17 @@ Component DrawUI()
             {
                 Elements row_elements;
                 auto row = container->ChildAt(i);
+
                 for (size_t j = 0; j < row->ChildCount(); ++j)
                 {
-                    row_elements.push_back(row->ChildAt(j)->Render() //
-                                           | flex);
+                    row_elements.push_back(
+                        row->ChildAt(j)->Render() //
+                        | flex);
                 }
-                grid_elements.push_back(hbox(std::move(row_elements)) //
-                                        | flex);
+
+                grid_elements.push_back(
+                    hbox(std::move(row_elements)) //
+                    | flex);
             }
 
             return vbox(
