@@ -11,11 +11,11 @@ Component DrawUI()
     static std::string result_text = "";
 
     std::vector<std::vector<std::string>> labels = {
-        {"pi", "!", "(", ")", "%", "C"},
-        {"e", "ln", "7", "8", "9", "/"},
-        {"sin", "log", "4", "5", "6", "*"},
-        {"cos", "sqrt", "1", "2", "3", "-"},
-        {"tan", "^", "0", ".", "=", "+"},
+        {" π ", " ! ", " ( ", " ) ", " % ", " C "},
+        {" e ", " ln", " 7 ", " 8 ", " 9 ", " / "},
+        {"sin", "log", " 4 ", " 5 ", " 6 ", " * "},
+        {"cos", " √ ", " 1 ", " 2 ", " 3 ", " - "},
+        {"tan", " ^ ", " 0 ", " . ", " = ", " + "},
     };
 
     auto container = Container::Vertical({});
@@ -59,18 +59,19 @@ Component DrawUI()
         container,
         [container]
         {
-            auto display = vbox(
-                               {
-                                   text(result_text)            //
-                                       | color(Color::GrayDark) //
-                                       | align_right,
-                                   text(input_text)             //
-                                       | size(HEIGHT, EQUAL, 1) //
-                                       | align_right            //
-                                       | bold,
-                               })         //
-                           | borderDouble //
-                           | color(Color::BlueLight);
+            auto display =
+                vbox(
+                    {
+                        text(result_text)            //
+                            | color(Color::GrayDark) //
+                            | align_right,
+                        text(input_text)             //
+                            | size(HEIGHT, EQUAL, 1) //
+                            | align_right            //
+                            | bold,
+                    })         //
+                | borderDouble //
+                | color(Color::BlueLight);
 
             Elements grid_elements;
             for (size_t i = 0; i < container->ChildCount(); ++i)
