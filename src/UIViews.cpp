@@ -1,11 +1,15 @@
-#include "UIViews.hpp"
 #include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
+#include <vector>
+#include <string>
 
 using namespace ftxui;
 
-Component DrawUI(void)
+Component DrawUI()
 {
+    static std::string input_text = "0";
+    static std::string result_text = "";
+
     std::vector<std::vector<std::string>> labels = {
         {"pi", "!", "(", ")", "%", "C"},
         {"e", "ln", "7", "8", "9", "/"},
@@ -14,48 +18,59 @@ Component DrawUI(void)
         {"tan", "^", "0", ".", "=", "+"},
     };
 
-    std::vector<std::vector<Component>> buttons_grid;
-    std::vector<Component> rows;
+    auto container = Container::Vertical({});
 
-    for (auto &row_labels : labels)
+    for (const auto &row_labels : labels)
     {
-        std::vector<Component> buttons;
+        auto row_container = Container::Horizontal({});
 
-        for (auto &label : row_labels)
-        {
-            buttons.push_back(Button(
+        for (const auto &label : row_labels)
+            row_container->Add(Button(
                 label,
                 [label]
                 {
                     //
                 }));
-        }
 
-        buttons_grid.push_back(buttons);
-        rows.push_back(Container::Horizontal(buttons));
+        container->Add(row_container);
     }
-
-    auto container = Container::Vertical(rows);
 
     return Renderer(
         container,
-        [buttons_grid]
+        [container]
         {
-            std::vector<Element> row_elements;
+            auto display = vbox({
+                               text(result_text)            //
+                                   | color(Color::GrayDark) //
+                                   | align_right,
+                               text(input_text)             //
+                                   | size(HEIGHT, EQUAL, 1) //
+                                   | align_right            //
+                                   | bold,
+                           })             //
+                           | borderDouble //
+                           | color(Color::BlueLight);
 
-            for (size_t i = 0; i < buttons_grid.size(); i++)
+            Elements grid_elements;
+            for (size_t i = 0; i < container->ChildCount(); ++i)
             {
-                std::vector<Element> button_elements;
-
-                for (size_t j = 0; j < buttons_grid[i].size(); j++)
+                Elements row_elements;
+                auto row = container->ChildAt(i);
+                for (size_t j = 0; j < row->ChildCount(); ++j)
                 {
-                    button_elements.push_back(
-                        buttons_grid[i][j]->Render() | flex | size(WIDTH, GREATER_THAN, 10) | border | center);
+                    row_elements.push_back(row->ChildAt(j)->Render() //
+                                           | flex);
                 }
-
-                row_elements.push_back(hbox(std::move(button_elements) | flex) | flex);
+                grid_elements.push_back(hbox(std::move(row_elements)) //
+                                        | flex);
             }
 
-            return vbox(std::move(row_elements));
+            return vbox(
+                       {
+                           display,
+                           vbox(std::move(grid_elements)) //
+                               | flex                     //
+                       })                                 //
+                   | border;
         });
 }
