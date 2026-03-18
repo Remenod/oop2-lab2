@@ -8,6 +8,9 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include "tinyexpr.h"
+#include "UIViews.hpp"
+
+using namespace ftxui;
 
 typedef std::function<double(double)> mathfunc;
 
@@ -33,8 +36,13 @@ static mathfunc get_func(const std::string &expr, int &err)
 
 int main()
 {
+    auto screen = ScreenInteractive::Fullscreen();
     int func_err;
     auto func = get_func("", func_err);
+
+    auto calcScreen = DrawUI();
+
+    screen.Loop(calcScreen);
 
     return 0;
 }
