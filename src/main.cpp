@@ -40,7 +40,9 @@ int main()
     int func_err;
     auto func = get_func("", func_err);
 
-    auto calcScreen = DrawUI();
+    std::string input_text = "0";
+
+    auto calcScreen = DrawUI(&input_text);
 
     screen.Loop(calcScreen);
 

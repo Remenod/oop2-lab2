@@ -5,9 +5,8 @@
 
 using namespace ftxui;
 
-Component DrawUI()
+Component DrawUI(std::string *input_text)
 {
-    static std::string input_text = "0";
     static std::string result_text = "";
 
     std::vector<std::vector<std::string>> labels = {
@@ -57,7 +56,7 @@ Component DrawUI()
 
     return Renderer(
         container,
-        [container]
+        [container, input_text]
         {
             auto display =
                 vbox(
@@ -65,7 +64,7 @@ Component DrawUI()
                         text(result_text)            //
                             | color(Color::GrayDark) //
                             | align_right,
-                        text(input_text)             //
+                        text(*input_text)            //
                             | size(HEIGHT, EQUAL, 1) //
                             | align_right            //
                             | bold,
