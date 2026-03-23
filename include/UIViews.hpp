@@ -1,4 +1,5 @@
 #pragma once
 #include <ftxui/component/component.hpp>
+#include "AppState.hpp"
 
-ftxui::Component DrawUI(std::string *input_text);
+ftxui::Component DrawUI(AppState *state);

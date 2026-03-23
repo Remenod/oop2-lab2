@@ -2,20 +2,12 @@
 #include <ftxui/dom/elements.hpp>
 #include <vector>
 #include <string>
+#include "AppState.hpp"
 
 using namespace ftxui;
 
-Component DrawUI(std::string *input_text)
+Component DrawUI(AppState &state)
 {
-    static std::string result_text = "";
-
-    std::vector<std::vector<std::string>> labels = {
-        {" π ", " ! ", " ( ", " ) ", " % ", " C "},
-        {" e ", " ln", " 7 ", " 8 ", " 9 ", " / "},
-        {"sin", "log", " 4 ", " 5 ", " 6 ", " * "},
-        {"cos", " √ ", " 1 ", " 2 ", " 3 ", " - "},
-        {"tan", " ^ ", " 0 ", " . ", " = ", " + "},
-    };
 
     auto container = Container::Vertical({});
 
@@ -38,33 +30,35 @@ Component DrawUI(std::string *input_text)
                | border;
     };
 
-    for (const auto &row_labels : labels)
+    for (size_t i = 0; i < AppState::ROWS; ++i)
     {
         auto row_container = Container::Horizontal({});
 
-        for (const auto &label : row_labels)
+        for (size_t j = 0; j < AppState::COLS; ++j)
+        {
             row_container->Add(Button(
-                label,
-                [label]
+                AppState::labels[i][j].data(),
+                [&state, i, j]
                 {
-                    //
+                    state.buttons_handler(i, j);
                 },
                 btn_option));
+        }
 
         container->Add(row_container);
     }
 
     return Renderer(
         container,
-        [container, input_text]
+        [container, state]
         {
             auto display =
                 vbox(
                     {
-                        text(result_text)            //
+                        text(state.result_text)      //
                             | color(Color::GrayDark) //
                             | align_right,
-                        text(*input_text)            //
+                        text(state.input_text)       //
                             | size(HEIGHT, EQUAL, 1) //
                             | align_right            //
                             | bold,
