@@ -63,8 +63,14 @@ void AppState::form_input_text(void)
     this->input_text.reserve(this->actionSequence.size() * 2);
     this->func_text.reserve(this->actionSequence.size() * 3);
 
-    auto last_ce = std::find(this->actionSequence.rbegin(), this->actionSequence.rend(), ButtonAction::ClearEntry);
-    auto start_iter = (last_ce != this->actionSequence.rend()) ? std::next(last_ce.base()) : this->actionSequence.begin();
+    auto last_ce = std::find(
+        this->actionSequence.rbegin(),
+        this->actionSequence.rend(),
+        ButtonAction::ClearEntry);
+
+    auto start_iter = (last_ce != this->actionSequence.rend())
+                          ? std::next(last_ce.base())
+                          : this->actionSequence.begin();
 
     struct TokenInfo
     {
