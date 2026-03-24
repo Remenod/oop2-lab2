@@ -15,7 +15,7 @@ int main()
 
     AppState state{};
 
-    auto calcScreen = DrawUI(&state);
+    auto calcScreen = DrawUI(state);
 
     screen.Loop(calcScreen);
 

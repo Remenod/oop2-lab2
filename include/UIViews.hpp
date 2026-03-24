@@ -2,4 +2,4 @@
 #include <ftxui/component/component.hpp>
 #include "AppState.hpp"
 
-ftxui::Component DrawUI(AppState *state);
+ftxui::Component DrawUI(AppState &state);
