@@ -50,7 +50,7 @@ Component DrawUI(AppState &state)
 
     return Renderer(
         container,
-        [container, state]
+        [container, &state]
         {
             auto display =
                 vbox(
