@@ -30,17 +30,17 @@ Component DrawUI(AppState &state)
                | border;
     };
 
-    for (size_t i = 0; i < AppState::ROWS; ++i)
+    for (const auto &row : AppState::buttons)
     {
         auto row_container = Container::Horizontal({});
 
-        for (size_t j = 0; j < AppState::COLS; ++j)
+        for (const auto &btn : row)
         {
             row_container->Add(Button(
-                AppState::buttons[i][j].label.data(),
-                [&state, i, j]
+                btn.label.data(),
+                [&state, action = btn.action]
                 {
-                    state.buttons_handler(AppState::buttons[i][j].action);
+                    state.buttons_handler(action);
                 },
                 btn_option));
         }
