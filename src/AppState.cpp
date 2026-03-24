@@ -179,12 +179,12 @@ void AppState::form_input_text(void)
             this->func_text += "e";
             break;
 
-        case ButtonAction::ClearEntry:
-            this->input_text += "";
+        case ButtonAction::Clear:
+            this->input_text = "";
             this->func_text = "";
             break;
         case ButtonAction::AllClear:
-        case ButtonAction::Clear:
+        case ButtonAction::ClearEntry:
         case ButtonAction::Equals:
             break;
         }
@@ -192,6 +192,7 @@ void AppState::form_input_text(void)
 }
 void AppState::all_clear(void)
 {
+    this->result_text = "0";
     this->actionSequence.clear();
 }
 void AppState::clear_entry(void)

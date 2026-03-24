@@ -56,8 +56,8 @@ struct AppState
                 {" ) ", ButtonAction::RParen},
                 {" % ", ButtonAction::Percent},
                 {" C ", ButtonAction::Clear},
-                {" CE", ButtonAction::Clear},
-                {" AC", ButtonAction::Clear} //
+                {" CE", ButtonAction::ClearEntry},
+                {" AC", ButtonAction::AllClear} //
             },
             {
                 {" e ", ButtonAction::E},
