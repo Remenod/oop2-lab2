@@ -6,6 +6,8 @@
 #include <sstream>
 #include <string>
 #include <iomanip>
+#include <unordered_map>
+#include <string_view>
 
 static std::function<double(void)> get_func(const std::string &expr, int &err)
 {
@@ -55,138 +57,67 @@ void AppState::eval(void)
 
 void AppState::form_input_text(void)
 {
-    this->input_text = "";
-    this->func_text = "";
+    this->input_text.clear();
+    this->func_text.clear();
+
+    this->input_text.reserve(this->actionSequence.size() * 2);
+    this->func_text.reserve(this->actionSequence.size() * 3);
 
     auto last_ce = std::find(this->actionSequence.rbegin(), this->actionSequence.rend(), ButtonAction::ClearEntry);
-
     auto start_iter = (last_ce != this->actionSequence.rend()) ? std::next(last_ce.base()) : this->actionSequence.begin();
+
+    struct TokenInfo
+    {
+        std::string_view input;
+        std::string_view func;
+    };
+
+    static const std::unordered_map<ButtonAction, TokenInfo> token_map = {
+        {ButtonAction::Digit0, {"0", "0"}},
+        {ButtonAction::Digit1, {"1", "1"}},
+        {ButtonAction::Digit2, {"2", "2"}},
+        {ButtonAction::Digit3, {"3", "3"}},
+        {ButtonAction::Digit4, {"4", "4"}},
+        {ButtonAction::Digit5, {"5", "5"}},
+        {ButtonAction::Digit6, {"6", "6"}},
+        {ButtonAction::Digit7, {"7", "7"}},
+        {ButtonAction::Digit8, {"8", "8"}},
+        {ButtonAction::Digit9, {"9", "9"}},
+
+        {ButtonAction::Dot, {".", "."}},
+        {ButtonAction::Add, {" + ", " + "}},
+        {ButtonAction::Sub, {" - ", " - "}},
+        {ButtonAction::Mul, {" * ", " * "}},
+        {ButtonAction::Div, {" / ", " / "}},
+        {ButtonAction::Percent, {"%", "/100"}},
+        {ButtonAction::UnaryMinus, {" -", " -"}},
+        {ButtonAction::LParen, {"(", "("}},
+        {ButtonAction::RParen, {")", ")"}},
+
+        {ButtonAction::Cos, {"cos", "cos"}},
+        {ButtonAction::Sin, {"sin", "sin"}},
+        {ButtonAction::Tan, {"tan", "tan"}},
+        {ButtonAction::Ln, {"ln", "ln"}},
+        {ButtonAction::Log, {"log", "log"}},
+        {ButtonAction::Sqrt, {"√", "sqrt"}},
+        {ButtonAction::Pow, {"^", "^"}},
+        {ButtonAction::Pi, {"π", "pi"}},
+        {ButtonAction::E, {"e", "e"}}};
 
     for (auto iter = start_iter; iter != this->actionSequence.end(); ++iter)
     {
-        switch (*iter)
+        if (*iter == ButtonAction::Clear)
         {
-        case ButtonAction::Digit0:
-            this->input_text += "0";
-            this->func_text += "0";
-            break;
-        case ButtonAction::Digit1:
-            this->input_text += "1";
-            this->func_text += "1";
-            break;
-        case ButtonAction::Digit2:
-            this->input_text += "2";
-            this->func_text += "2";
-            break;
-        case ButtonAction::Digit3:
-            this->input_text += "3";
-            this->func_text += "3";
-            break;
-        case ButtonAction::Digit4:
-            this->input_text += "4";
-            this->func_text += "4";
-            break;
-        case ButtonAction::Digit5:
-            this->input_text += "5";
-            this->func_text += "5";
-            break;
-        case ButtonAction::Digit6:
-            this->input_text += "6";
-            this->func_text += "6";
-            break;
-        case ButtonAction::Digit7:
-            this->input_text += "7";
-            this->func_text += "7";
-            break;
-        case ButtonAction::Digit8:
-            this->input_text += "8";
-            this->func_text += "8";
-            break;
-        case ButtonAction::Digit9:
-            this->input_text += "9";
-            this->func_text += "9";
-            break;
-        case ButtonAction::Dot:
-            this->input_text += ".";
-            this->func_text += ".";
-            break;
-        case ButtonAction::Add:
-            this->input_text += " + ";
-            this->func_text += " + ";
-            break;
-        case ButtonAction::Sub:
-            this->input_text += " - ";
-            this->func_text += " - ";
-            break;
-        case ButtonAction::Mul:
-            this->input_text += " * ";
-            this->func_text += " * ";
-            break;
-        case ButtonAction::Div:
-            this->input_text += " / ";
-            this->func_text += " / ";
-            break;
-        case ButtonAction::Percent:
-            this->input_text += "%";
-            this->func_text += "/100";
-            break;
-        case ButtonAction::UnaryMinus:
-            this->input_text += " -";
-            this->func_text += " -";
-            break;
-        case ButtonAction::LParen:
-            this->input_text += "(";
-            this->func_text += "(";
-            break;
-        case ButtonAction::RParen:
-            this->input_text += ")";
-            this->func_text += ")";
-            break;
-        case ButtonAction::Cos:
-            this->input_text += "cos";
-            this->func_text += "cos";
-            break;
-        case ButtonAction::Sin:
-            this->input_text += "sin";
-            this->func_text += "sin";
-            break;
-        case ButtonAction::Tan:
-            this->input_text += "tan";
-            this->func_text += "tan";
-            break;
-        case ButtonAction::Ln:
-            this->input_text += "ln";
-            this->func_text += "ln";
-            break;
-        case ButtonAction::Log:
-            this->input_text += "log";
-            this->func_text += "log";
-            break;
-        case ButtonAction::Sqrt:
-            this->input_text += "√";
-            this->func_text += "sqrt";
-            break;
-        case ButtonAction::Pow:
-            this->input_text += "^";
-            this->func_text += "^";
-            break;
-        case ButtonAction::Pi:
-            this->input_text += "π";
-            this->func_text += "pi";
-            break;
-        case ButtonAction::E:
-            this->input_text += "e";
-            this->func_text += "e";
-            break;
+            this->input_text.clear();
+            this->func_text.clear();
+            continue;
+        }
 
-        case ButtonAction::Clear:
-            this->input_text = "";
-            this->func_text = "";
-            break;
-        case ButtonAction::AllClear:
-        case ButtonAction::ClearEntry:
-        case ButtonAction::Equals:
-            break;
+        auto match = token_map.find(*iter);
+        if (match != token_map.end())
+        {
+            this->input_text += match->second.input;
+            this->func_text += match->second.func;
         }
     }
 }
