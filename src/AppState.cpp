@@ -3,98 +3,7 @@
 #include <memory>
 #include <functional>
 
-using tfIsThat = std::array<std::string_view, AppState::COLS>;
-
 typedef std::function<double(double)> mathfunc;
-
-constexpr std::array<tfIsThat, AppState::ROWS> AppState::labels = {
-    tfIsThat{" π ", " ! ", " ( ", " ) ", " % ", " C "},
-    tfIsThat{" e ", "ln ", " 7 ", " 8 ", " 9 ", " / "},
-    tfIsThat{"sin", "log", " 4 ", " 5 ", " 6 ", " * "},
-    tfIsThat{"cos", " √ ", " 1 ", " 2 ", " 3 ", " - "},
-    tfIsThat{"tan", " ^ ", " 0 ", " . ", " = ", " + "},
-};
-
-void AppState::eval(void)
-{
-    int func_err;
-    auto func = get_func("", func_err);
-}
-
-void AppState::reset(void)
-{
-    this->input_text = "";
-    this->result_text = "0";
-}
-
-void AppState::buttons_handler(size_t row, size_t col)
-{
-    switch (row)
-    {
-    case 0:
-        switch (col)
-        {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        default:
-            throw "ну бля";
-        }
-    case 1:
-        switch (col)
-        {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        default:
-            throw "ну бля";
-        }
-    case 2:
-        switch (col)
-        {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        default:
-            throw "ну бля";
-        }
-    case 3:
-        switch (col)
-        {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        default:
-            throw "ну бля";
-        }
-    case 4:
-        switch (col)
-        {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        default:
-            throw "ну бля";
-        }
-    default:
-        throw "ну бля";
-    }
-}
 
 static mathfunc get_func(const std::string &expr, int &err)
 {
@@ -114,4 +23,152 @@ static mathfunc get_func(const std::string &expr, int &err)
         *te_x = x;
         return te_eval(e.get());
     };
+}
+
+void AppState::eval(void)
+{
+    int func_err;
+    auto func = get_func("", func_err);
+}
+
+void AppState::reset(void)
+{
+    this->input_text = "";
+    this->result_text = "0";
+}
+
+void AppState::buttons_handler(ButtonAction act)
+{
+    auto is_digit = [](ButtonAction a)
+    {
+        return a >= ButtonAction::Digit0 && a <= ButtonAction::Digit9;
+    };
+
+    auto is_binary_operator = [](ButtonAction a)
+    {
+        return a == ButtonAction::Add || a == ButtonAction::Sub ||
+               a == ButtonAction::Mul || a == ButtonAction::Div || a == ButtonAction::Pow;
+    };
+
+    auto is_postfix_operator = [](ButtonAction a)
+    {
+        return a == ButtonAction::Percent || a == ButtonAction::Fact;
+    };
+
+    auto is_constant = [](ButtonAction a)
+    {
+        return a == ButtonAction::Pi || a == ButtonAction::E;
+    };
+
+    ButtonAction last = actionSequence.empty() ? ButtonAction::Clear : actionSequence.back();
+
+    switch (act)
+    {
+    case ButtonAction::Digit0:
+    case ButtonAction::Digit1:
+    case ButtonAction::Digit2:
+    case ButtonAction::Digit3:
+    case ButtonAction::Digit4:
+    case ButtonAction::Digit5:
+    case ButtonAction::Digit6:
+    case ButtonAction::Digit7:
+    case ButtonAction::Digit8:
+    case ButtonAction::Digit9:
+        if (last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
+            break;
+        actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::Dot:
+        if (is_digit(last))
+        {
+            bool has_dot = false;
+            for (auto it = actionSequence.rbegin(); it != actionSequence.rend(); ++it)
+            {
+                if (*it == ButtonAction::Dot)
+                {
+                    has_dot = true;
+                    break;
+                }
+
+                if (!is_digit(*it))
+                    break;
+            }
+
+            if (!has_dot)
+                actionSequence.emplace_back(act);
+        }
+        break;
+
+    case ButtonAction::LParen:
+        if (actionSequence.empty() || is_binary_operator(last) || last == ButtonAction::LParen)
+            actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::RParen:
+        if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
+        {
+            int open_parens = 0;
+            for (auto a : actionSequence)
+            {
+                if (a == ButtonAction::LParen)
+                    open_parens++;
+                if (a == ButtonAction::RParen)
+                    open_parens--;
+            }
+
+            if (open_parens > 0)
+                actionSequence.emplace_back(act);
+        }
+        break;
+
+    case ButtonAction::Sub:
+        if (actionSequence.empty() || last == ButtonAction::LParen)
+            actionSequence.emplace_back(act);
+        else if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
+            actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::Add:
+    case ButtonAction::Mul:
+    case ButtonAction::Div:
+    case ButtonAction::Pow:
+        if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
+            actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::Sin:
+    case ButtonAction::Cos:
+    case ButtonAction::Tan:
+    case ButtonAction::Sqrt:
+    case ButtonAction::Ln:
+    case ButtonAction::Log:
+        if (actionSequence.empty() || is_binary_operator(last) || last == ButtonAction::LParen)
+        {
+            actionSequence.emplace_back(act);
+            actionSequence.emplace_back(ButtonAction::LParen);
+        }
+        break;
+
+    case ButtonAction::Fact:
+    case ButtonAction::Percent:
+        if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
+            actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::Pi:
+    case ButtonAction::E:
+        if (actionSequence.empty() || is_binary_operator(last) || last == ButtonAction::LParen)
+            actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::Clear:
+        actionSequence.clear();
+        break;
+
+    case ButtonAction::Equals:
+        if (!(is_binary_operator(last) || last == ButtonAction::LParen || last == ButtonAction::Dot))
+            this->eval();
+        break;
+    }
 }

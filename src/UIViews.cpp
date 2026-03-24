@@ -37,10 +37,10 @@ Component DrawUI(AppState &state)
         for (size_t j = 0; j < AppState::COLS; ++j)
         {
             row_container->Add(Button(
-                AppState::labels[i][j].data(),
+                AppState::buttons[i][j].label.data(),
                 [&state, i, j]
                 {
-                    state.buttons_handler(i, j);
+                    state.buttons_handler(AppState::buttons[i][j].action);
                 },
                 btn_option));
         }

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(ftxui REQUIRED)
 
 add_executable(app
+    src/AppState.cpp
     src/main.cpp
     src/UIViews.cpp
     lib/tinyexpr.c
