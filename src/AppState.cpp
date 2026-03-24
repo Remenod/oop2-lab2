@@ -3,15 +3,15 @@
 #include <memory>
 #include <functional>
 #include <algorithm>
+#include <sstream>
+#include <string>
+#include <iomanip>
 
-typedef std::function<double(double)> mathfunc;
-
-static mathfunc get_func(const std::string &expr, int &err)
+static std::function<double(void)> get_func(const std::string &expr, int &err)
 {
     auto te_x = std::make_shared<double>(0);
 
-    te_variable vars[] = {{"x", te_x.get(), TE_VARIABLE, nullptr}};
-    te_expr *e_raw = te_compile(expr.c_str(), vars, 1, &err);
+    te_expr *e_raw = te_compile(expr.c_str(), {}, 1, &err);
 
     if (err)
         return {};
@@ -19,22 +19,44 @@ static mathfunc get_func(const std::string &expr, int &err)
     auto e = std::shared_ptr<te_expr>(e_raw, [](te_expr *ptr)
                                       { te_free(ptr); });
 
-    return [e, te_x](double x)
+    return [e]()
     {
-        *te_x = x;
         return te_eval(e.get());
     };
+}
+
+static std::string doubleToString(double value, int precision = 6)
+{
+    std::ostringstream oss;
+    oss << std::setprecision(precision) << std::noshowpoint << value;
+    std::string s = oss.str();
+
+    if (s.find('.') != std::string::npos)
+    {
+        s.erase(s.find_last_not_of('0') + 1, std::string::npos);
+        if (s.back() == '.')
+            s.pop_back();
+    }
+
+    return s;
 }
 
 void AppState::eval(void)
 {
     int func_err;
-    auto func = get_func("", func_err);
+    auto func = get_func(this->func_text, func_err);
+    if (!func_err)
+        this->result_text = doubleToString(func());
+    else
+    {
+        // idk
+    }
 }
 
 void AppState::form_input_text(void)
 {
     this->input_text = "";
+    this->func_text = "";
 
     auto last_ce = std::find(this->actionSequence.rbegin(), this->actionSequence.rend(), ButtonAction::ClearEntry);
 
@@ -46,92 +68,123 @@ void AppState::form_input_text(void)
         {
         case ButtonAction::Digit0:
             this->input_text += "0";
+            this->func_text += "0";
             break;
         case ButtonAction::Digit1:
             this->input_text += "1";
+            this->func_text += "1";
             break;
         case ButtonAction::Digit2:
             this->input_text += "2";
+            this->func_text += "2";
             break;
         case ButtonAction::Digit3:
             this->input_text += "3";
+            this->func_text += "3";
             break;
         case ButtonAction::Digit4:
             this->input_text += "4";
+            this->func_text += "4";
             break;
         case ButtonAction::Digit5:
             this->input_text += "5";
+            this->func_text += "5";
             break;
         case ButtonAction::Digit6:
             this->input_text += "6";
+            this->func_text += "6";
             break;
         case ButtonAction::Digit7:
             this->input_text += "7";
+            this->func_text += "7";
             break;
         case ButtonAction::Digit8:
             this->input_text += "8";
+            this->func_text += "8";
             break;
         case ButtonAction::Digit9:
             this->input_text += "9";
+            this->func_text += "9";
             break;
         case ButtonAction::Dot:
             this->input_text += ".";
+            this->func_text += ".";
             break;
         case ButtonAction::Add:
             this->input_text += " + ";
+            this->func_text += " + ";
             break;
         case ButtonAction::Sub:
             this->input_text += " - ";
+            this->func_text += " - ";
             break;
         case ButtonAction::Mul:
             this->input_text += " * ";
+            this->func_text += " * ";
             break;
         case ButtonAction::Div:
             this->input_text += " / ";
+            this->func_text += " / ";
             break;
         case ButtonAction::Percent:
             this->input_text += "%";
+            this->func_text += "/100";
             break;
         case ButtonAction::UnaryMinus:
             this->input_text += " -";
+            this->func_text += " -";
             break;
         case ButtonAction::LParen:
             this->input_text += "(";
+            this->func_text += "(";
             break;
         case ButtonAction::RParen:
             this->input_text += ")";
+            this->func_text += ")";
             break;
         case ButtonAction::Cos:
             this->input_text += "cos";
+            this->func_text += "cos";
             break;
         case ButtonAction::Sin:
             this->input_text += "sin";
+            this->func_text += "sin";
             break;
         case ButtonAction::Tan:
             this->input_text += "tan";
+            this->func_text += "tan";
             break;
         case ButtonAction::Ln:
             this->input_text += "ln";
+            this->func_text += "ln";
             break;
         case ButtonAction::Log:
             this->input_text += "log";
+            this->func_text += "log";
             break;
         case ButtonAction::Sqrt:
             this->input_text += "√";
+            this->func_text += "sqrt";
             break;
         case ButtonAction::Pow:
             this->input_text += "^";
+            this->func_text += "^";
             break;
         case ButtonAction::Pi:
             this->input_text += "π";
+            this->func_text += "pi";
             break;
         case ButtonAction::E:
             this->input_text += "e";
+            this->func_text += "e";
             break;
 
+        case ButtonAction::ClearEntry:
+            this->input_text += "";
+            this->func_text = "";
+            break;
         case ButtonAction::AllClear:
         case ButtonAction::Clear:
-        case ButtonAction::ClearEntry:
         case ButtonAction::Equals:
             break;
         }
@@ -143,7 +196,6 @@ void AppState::all_clear(void)
 }
 void AppState::clear_entry(void)
 {
-    this->input_text = "";
     if (!this->actionSequence.empty())
         this->actionSequence.pop_back();
 }

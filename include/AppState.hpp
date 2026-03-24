@@ -95,6 +95,7 @@ struct AppState
 
     std::string input_text;
     std::string result_text;
+    std::string func_text;
 
     std::vector<ButtonAction> actionSequence;
 
