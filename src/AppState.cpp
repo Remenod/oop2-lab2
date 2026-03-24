@@ -2,6 +2,7 @@
 #include "tinyexpr.h"
 #include <memory>
 #include <functional>
+#include <algorithm>
 
 typedef std::function<double(double)> mathfunc;
 
@@ -31,10 +32,120 @@ void AppState::eval(void)
     auto func = get_func("", func_err);
 }
 
-void AppState::reset(void)
+void AppState::form_input_text(void)
 {
     this->input_text = "";
-    this->result_text = "0";
+
+    auto last_ce = std::find(this->actionSequence.rbegin(), this->actionSequence.rend(), ButtonAction::ClearEntry);
+
+    auto start_iter = (last_ce != this->actionSequence.rend()) ? std::next(last_ce.base()) : this->actionSequence.begin();
+
+    for (auto iter = start_iter; iter != this->actionSequence.end(); ++iter)
+    {
+        switch (*iter)
+        {
+        case ButtonAction::Digit0:
+            this->input_text += "0";
+            break;
+        case ButtonAction::Digit1:
+            this->input_text += "1";
+            break;
+        case ButtonAction::Digit2:
+            this->input_text += "2";
+            break;
+        case ButtonAction::Digit3:
+            this->input_text += "3";
+            break;
+        case ButtonAction::Digit4:
+            this->input_text += "4";
+            break;
+        case ButtonAction::Digit5:
+            this->input_text += "5";
+            break;
+        case ButtonAction::Digit6:
+            this->input_text += "6";
+            break;
+        case ButtonAction::Digit7:
+            this->input_text += "7";
+            break;
+        case ButtonAction::Digit8:
+            this->input_text += "8";
+            break;
+        case ButtonAction::Digit9:
+            this->input_text += "9";
+            break;
+        case ButtonAction::Dot:
+            this->input_text += ".";
+            break;
+        case ButtonAction::Add:
+            this->input_text += " + ";
+            break;
+        case ButtonAction::Sub:
+            this->input_text += " - ";
+            break;
+        case ButtonAction::Mul:
+            this->input_text += " * ";
+            break;
+        case ButtonAction::Div:
+            this->input_text += " / ";
+            break;
+        case ButtonAction::Percent:
+            this->input_text += "%";
+            break;
+        case ButtonAction::UnaryMinus:
+            this->input_text += " -";
+            break;
+        case ButtonAction::LParen:
+            this->input_text += "(";
+            break;
+        case ButtonAction::RParen:
+            this->input_text += ")";
+            break;
+        case ButtonAction::Cos:
+            this->input_text += "cos";
+            break;
+        case ButtonAction::Sin:
+            this->input_text += "sin";
+            break;
+        case ButtonAction::Tan:
+            this->input_text += "tan";
+            break;
+        case ButtonAction::Ln:
+            this->input_text += "ln";
+            break;
+        case ButtonAction::Log:
+            this->input_text += "log";
+            break;
+        case ButtonAction::Sqrt:
+            this->input_text += "√";
+            break;
+        case ButtonAction::Pow:
+            this->input_text += "^";
+            break;
+        case ButtonAction::Pi:
+            this->input_text += "π";
+            break;
+        case ButtonAction::E:
+            this->input_text += "e";
+            break;
+
+        case ButtonAction::AllClear:
+        case ButtonAction::Clear:
+        case ButtonAction::ClearEntry:
+        case ButtonAction::Equals:
+            break;
+        }
+    }
+}
+void AppState::all_clear(void)
+{
+    this->actionSequence.clear();
+}
+void AppState::clear_entry(void)
+{
+    this->input_text = "";
+    if (!this->actionSequence.empty())
+        this->actionSequence.pop_back();
 }
 
 void AppState::buttons_handler(ButtonAction act)
@@ -52,7 +163,7 @@ void AppState::buttons_handler(ButtonAction act)
 
     auto is_postfix_operator = [](ButtonAction a)
     {
-        return a == ButtonAction::Percent || a == ButtonAction::Fact;
+        return a == ButtonAction::Percent;
     };
 
     auto is_constant = [](ButtonAction a)
@@ -122,11 +233,12 @@ void AppState::buttons_handler(ButtonAction act)
         }
         break;
 
+    case ButtonAction::UnaryMinus:
     case ButtonAction::Sub:
         if (actionSequence.empty() || last == ButtonAction::LParen)
-            actionSequence.emplace_back(act);
+            actionSequence.emplace_back(ButtonAction::UnaryMinus);
         else if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
-            actionSequence.emplace_back(act);
+            actionSequence.emplace_back(ButtonAction::Sub);
         break;
 
     case ButtonAction::Add:
@@ -150,7 +262,6 @@ void AppState::buttons_handler(ButtonAction act)
         }
         break;
 
-    case ButtonAction::Fact:
     case ButtonAction::Percent:
         if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
             actionSequence.emplace_back(act);
@@ -163,7 +274,14 @@ void AppState::buttons_handler(ButtonAction act)
         break;
 
     case ButtonAction::Clear:
-        actionSequence.clear();
+        actionSequence.emplace_back(act);
+        break;
+
+    case ButtonAction::AllClear:
+        this->all_clear();
+        break;
+    case ButtonAction::ClearEntry:
+        this->clear_entry();
         break;
 
     case ButtonAction::Equals:
@@ -171,4 +289,5 @@ void AppState::buttons_handler(ButtonAction act)
             this->eval();
         break;
     }
+    this->form_input_text();
 }
