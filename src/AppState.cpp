@@ -203,7 +203,7 @@ void AppState::buttons_handler(ButtonAction act)
         break;
 
     case ButtonAction::LParen:
-        if (actionSequence.empty() || is_binary_operator(last) ||
+        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::UnaryMinus || is_binary_operator(last) ||
             last == ButtonAction::LParen || is_prefix_function(last))
             actionSequence.emplace_back(act);
         break;
@@ -227,7 +227,7 @@ void AppState::buttons_handler(ButtonAction act)
 
     case ButtonAction::UnaryMinus:
     case ButtonAction::Sub:
-        if (actionSequence.empty() || last == ButtonAction::LParen)
+        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::LParen)
             actionSequence.emplace_back(ButtonAction::UnaryMinus);
         else if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
             actionSequence.emplace_back(ButtonAction::Sub);
@@ -247,7 +247,7 @@ void AppState::buttons_handler(ButtonAction act)
     case ButtonAction::Sqrt:
     case ButtonAction::Ln:
     case ButtonAction::Log:
-        if (actionSequence.empty() || is_binary_operator(last) || last == ButtonAction::LParen)
+        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::UnaryMinus || is_binary_operator(last) || last == ButtonAction::LParen)
         {
             actionSequence.emplace_back(act);
             actionSequence.emplace_back(ButtonAction::LParen);
@@ -261,7 +261,7 @@ void AppState::buttons_handler(ButtonAction act)
 
     case ButtonAction::Pi:
     case ButtonAction::E:
-        if (actionSequence.empty() || is_binary_operator(last) || last == ButtonAction::LParen)
+        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::UnaryMinus || is_binary_operator(last) || last == ButtonAction::LParen)
             actionSequence.emplace_back(act);
         break;
 
