@@ -223,6 +223,13 @@ void AppState::buttons_handler(ButtonAction act)
         return a == ButtonAction::Pi || a == ButtonAction::E;
     };
 
+    auto is_prefix_function = [](ButtonAction a)
+    {
+        return a == ButtonAction::Sin || a == ButtonAction::Cos ||
+               a == ButtonAction::Tan || a == ButtonAction::Sqrt ||
+               a == ButtonAction::Ln || a == ButtonAction::Log;
+    };
+
     ButtonAction last = actionSequence.empty() ? ButtonAction::Clear : actionSequence.back();
 
     switch (act)
@@ -264,7 +271,8 @@ void AppState::buttons_handler(ButtonAction act)
         break;
 
     case ButtonAction::LParen:
-        if (actionSequence.empty() || is_binary_operator(last) || last == ButtonAction::LParen)
+        if (actionSequence.empty() || is_binary_operator(last) ||
+            last == ButtonAction::LParen || is_prefix_function(last))
             actionSequence.emplace_back(act);
         break;
 
