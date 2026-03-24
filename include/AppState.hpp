@@ -99,10 +99,11 @@ struct AppState
 
     std::vector<ButtonAction> actionSequence;
 
-    AppState() : input_text(""), result_text("0")
+    AppState() : input_text(""), result_text("0"), func_text("")
     {
-        input_text.reserve(64);
-        result_text.reserve(64);
+        input_text.reserve(256);
+        result_text.reserve(256);
+        result_text.reserve(256);
     }
 
     void buttons_handler(ButtonAction btn);
