@@ -138,7 +138,7 @@ void AppState::clear_entry(void)
         this->actionSequence.pop_back();
 }
 
-void AppState::buttons_handler(ButtonAction act)
+void AppState::button_handler(ButtonAction act)
 {
     static auto is_digit = [](ButtonAction a)
     { return a >= ButtonAction::Digit0 && a <= ButtonAction::Digit9; };

@@ -51,7 +51,7 @@ ftxui::ComponentDecorator GetEventCatcher(AppState &state)
             {
                 if (event == mapped_event)
                 {
-                    state.buttons_handler(action);
+                    state.button_handler(action);
 
                     if (action != ButtonAction::Equals)
                         state.form_input_text();

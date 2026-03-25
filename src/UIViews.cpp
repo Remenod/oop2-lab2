@@ -40,7 +40,7 @@ Component DrawUI(AppState &state)
                 btn.label.data(),
                 [&state, action = btn.action]
                 {
-                    state.buttons_handler(action);
+                    state.button_handler(action);
                 },
                 btn_option));
         }

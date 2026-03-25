@@ -106,7 +106,7 @@ struct AppState
         result_text.reserve(256);
     }
 
-    void buttons_handler(ButtonAction btn);
+    void button_handler(ButtonAction btn);
     void eval(void);
     void form_input_text(void);
     void all_clear(void);
