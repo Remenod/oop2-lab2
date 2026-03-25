@@ -1,8 +1,4 @@
-#include <ftxui/component/component.hpp>
-#include <ftxui/dom/elements.hpp>
-#include <vector>
-#include <string>
-#include "AppState.hpp"
+#include "UIViews.hpp"
 
 using namespace ftxui;
 

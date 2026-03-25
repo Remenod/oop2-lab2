@@ -3,11 +3,7 @@
 #include <memory>
 #include <functional>
 #include <algorithm>
-#include <sstream>
-#include <string>
 #include <iomanip>
-#include <unordered_map>
-#include <string_view>
 
 static std::function<double(void)> get_func(const std::string &expr, int &err)
 {

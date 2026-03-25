@@ -1,7 +1,6 @@
 #include "KeyboardEvents.hpp"
 #include <ftxui/component/screen_interactive.hpp>
 #include <vector>
-#include <utility>
 
 using namespace ftxui;
 
