@@ -1,5 +1,7 @@
 #include "KeyboardEvents.hpp"
 #include <ftxui/component/screen_interactive.hpp>
+#include <vector>
+#include <utility>
 
 using namespace ftxui;
 
@@ -8,179 +10,54 @@ ftxui::ComponentDecorator GetEventCatcher(AppState &state)
     return CatchEvent(
         [&](Event event)
         {
-            if (event == Event::Character('p'))
-            {
-                state.buttons_handler(ButtonAction::Pi);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('e'))
-            {
-                state.buttons_handler(ButtonAction::E);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('('))
-            {
-                state.buttons_handler(ButtonAction::LParen);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character(')'))
-            {
-                state.buttons_handler(ButtonAction::RParen);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Backspace)
-            {
-                state.buttons_handler(ButtonAction::ClearEntry);
-                state.form_input_text();
-                return true;
-            }
+            static const std::vector<std::pair<Event, ButtonAction>> key_bindings = {
+                {Event::Character('p'), ButtonAction::Pi},
+                {Event::Character('e'), ButtonAction::E},
+                {Event::Character('('), ButtonAction::LParen},
+                {Event::Character(')'), ButtonAction::RParen},
 
-            if (event == Event::Character('l'))
-            {
-                state.buttons_handler(ButtonAction::Ln);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('g'))
-            {
-                state.buttons_handler(ButtonAction::Log);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('q'))
-            {
-                state.buttons_handler(ButtonAction::Sqrt);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('s'))
-            {
-                state.buttons_handler(ButtonAction::Sin);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('c'))
-            {
-                state.buttons_handler(ButtonAction::Cos);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('t'))
-            {
-                state.buttons_handler(ButtonAction::Tan);
-                state.form_input_text();
-                return true;
-            }
+                {Event::Backspace, ButtonAction::ClearEntry},
+                {Event::Character('='), ButtonAction::Equals},
+                {Event::Return, ButtonAction::Equals},
 
-            if (event == Event::Character('0'))
-            {
-                state.buttons_handler(ButtonAction::Digit0);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('1'))
-            {
-                state.buttons_handler(ButtonAction::Digit1);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('2'))
-            {
-                state.buttons_handler(ButtonAction::Digit2);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('3'))
-            {
-                state.buttons_handler(ButtonAction::Digit3);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('4'))
-            {
-                state.buttons_handler(ButtonAction::Digit4);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('5'))
-            {
-                state.buttons_handler(ButtonAction::Digit5);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('6'))
-            {
-                state.buttons_handler(ButtonAction::Digit6);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('7'))
-            {
-                state.buttons_handler(ButtonAction::Digit7);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('8'))
-            {
-                state.buttons_handler(ButtonAction::Digit8);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('9'))
-            {
-                state.buttons_handler(ButtonAction::Digit9);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('.'))
-            {
-                state.buttons_handler(ButtonAction::Dot);
-                state.form_input_text();
-                return true;
-            }
+                {Event::Character('l'), ButtonAction::Ln},
+                {Event::Character('g'), ButtonAction::Log},
+                {Event::Character('q'), ButtonAction::Sqrt},
+                {Event::Character('s'), ButtonAction::Sin},
+                {Event::Character('c'), ButtonAction::Cos},
+                {Event::Character('t'), ButtonAction::Tan},
 
-            if (event == Event::Character('+'))
+                {Event::Character('0'), ButtonAction::Digit0},
+                {Event::Character('1'), ButtonAction::Digit1},
+                {Event::Character('2'), ButtonAction::Digit2},
+                {Event::Character('3'), ButtonAction::Digit3},
+                {Event::Character('4'), ButtonAction::Digit4},
+                {Event::Character('5'), ButtonAction::Digit5},
+                {Event::Character('6'), ButtonAction::Digit6},
+                {Event::Character('7'), ButtonAction::Digit7},
+                {Event::Character('8'), ButtonAction::Digit8},
+                {Event::Character('9'), ButtonAction::Digit9},
+                {Event::Character('.'), ButtonAction::Dot},
+
+                {Event::Character('+'), ButtonAction::Add},
+                {Event::Character('-'), ButtonAction::Sub},
+                {Event::Character('*'), ButtonAction::Mul},
+                {Event::Character('/'), ButtonAction::Div},
+                {Event::Character('^'), ButtonAction::Pow},
+                {Event::Character('%'), ButtonAction::Percent},
+            };
+
+            for (const auto &[mapped_event, action] : key_bindings)
             {
-                state.buttons_handler(ButtonAction::Add);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('-'))
-            {
-                state.buttons_handler(ButtonAction::Sub);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('*'))
-            {
-                state.buttons_handler(ButtonAction::Mul);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('/'))
-            {
-                state.buttons_handler(ButtonAction::Div);
-                state.form_input_text();
-                return true;
-            }
-            if (event == Event::Character('^'))
-            {
-                state.buttons_handler(ButtonAction::Pow);
-                return true;
-            }
-            if (event == Event::Character('=') || event == Event::Return)
-            {
-                state.buttons_handler(ButtonAction::Equals);
-                return true;
-            }
-            if (event == Event::Character('%'))
-            {
-                state.buttons_handler(ButtonAction::Percent);
-                return true;
+                if (event == mapped_event)
+                {
+                    state.buttons_handler(action);
+
+                    if (action != ButtonAction::Equals)
+                        state.form_input_text();
+
+                    return true;
+                }
             }
 
             return false;
