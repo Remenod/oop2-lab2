@@ -134,7 +134,7 @@ void AppState::all_clear(void)
 }
 void AppState::clear_entry(void)
 {
-    if (!this->actionSequence.empty())
+    if (!this->actionSequence.empty() && this->actionSequence.back() != ButtonAction::Clear)
         this->actionSequence.pop_back();
 }
 
