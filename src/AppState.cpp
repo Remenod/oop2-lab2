@@ -210,7 +210,10 @@ void AppState::button_handler(ButtonAction act)
     case ButtonAction::Digit7:
     case ButtonAction::Digit8:
     case ButtonAction::Digit9:
-        if (last != ButtonAction::RParen && !is_constant(last) && !is_postfix_operator(last))
+        if (last != ButtonAction::RParen &&
+            !is_constant(last) &&
+            !is_postfix_operator(last) &&
+            !is_prefix_function(last))
             append(act);
         break;
 
