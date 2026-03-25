@@ -283,9 +283,28 @@ void AppState::buttons_handler(ButtonAction act)
         break;
 
     case ButtonAction::Equals:
-        if (!(is_binary_operator(last) || last == ButtonAction::LParen || last == ButtonAction::Dot))
+    {
+        bool ends_with_invalid_token =
+            is_binary_operator(last) ||
+            last == ButtonAction::LParen ||
+            last == ButtonAction::Dot ||
+            last == ButtonAction::UnaryMinus ||
+            is_prefix_function(last);
+
+        int open_parens_count = 0;
+        for (auto act : this->actionSequence)
+        {
+            if (act == ButtonAction::LParen)
+                open_parens_count++;
+            else if (act == ButtonAction::RParen)
+                open_parens_count--;
+        }
+        bool parens_balanced = (open_parens_count == 0);
+
+        if (!ends_with_invalid_token && parens_balanced)
             this->eval();
         break;
+    }
     }
     this->form_input_text();
 }
