@@ -6,6 +6,7 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include "UIViews.hpp"
+#include "KeyboardEvents.hpp"
 
 using namespace ftxui;
 
@@ -17,7 +18,9 @@ int main()
 
     auto calcScreen = DrawUI(state);
 
-    screen.Loop(calcScreen);
+    auto eventHandler = GetEventCatcher(state);
+
+    screen.Loop(calcScreen | eventHandler);
 
     return 0;
 }

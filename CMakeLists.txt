@@ -9,6 +9,7 @@ add_executable(app
     src/AppState.cpp
     src/main.cpp
     src/UIViews.cpp
+    src/KeyboardEvents.cpp
     lib/tinyexpr.c
 )
 
