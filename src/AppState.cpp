@@ -140,35 +140,67 @@ void AppState::clear_entry(void)
 
 void AppState::buttons_handler(ButtonAction act)
 {
-    auto is_digit = [](ButtonAction a)
+    static auto is_digit = [](ButtonAction a)
+    { return a >= ButtonAction::Digit0 && a <= ButtonAction::Digit9; };
+
+    static auto is_binary_operator = [](ButtonAction a)
     {
-        return a >= ButtonAction::Digit0 && a <= ButtonAction::Digit9;
+        return a == ButtonAction::Add ||
+               a == ButtonAction::Sub ||
+               a == ButtonAction::Mul ||
+               a == ButtonAction::Div ||
+               a == ButtonAction::Pow;
     };
 
-    auto is_binary_operator = [](ButtonAction a)
+    static auto is_postfix_operator = [](ButtonAction a)
+    { return a == ButtonAction::Percent; };
+
+    static auto is_constant = [](ButtonAction a)
+    { return a == ButtonAction::Pi || a == ButtonAction::E; };
+
+    static auto is_prefix_function = [](ButtonAction a)
     {
-        return a == ButtonAction::Add || a == ButtonAction::Sub ||
-               a == ButtonAction::Mul || a == ButtonAction::Div || a == ButtonAction::Pow;
+        return a == ButtonAction::Ln ||
+               a == ButtonAction::Log ||
+               a == ButtonAction::Sin ||
+               a == ButtonAction::Cos ||
+               a == ButtonAction::Tan ||
+               a == ButtonAction::Sqrt;
     };
 
-    auto is_postfix_operator = [](ButtonAction a)
+    auto can_append_operator = [&](ButtonAction a)
     {
-        return a == ButtonAction::Percent;
+        return is_digit(a) || a == ButtonAction::RParen || is_constant(a) || is_postfix_operator(a);
     };
 
-    auto is_constant = [](ButtonAction a)
+    auto is_value_start = [&](ButtonAction a)
     {
-        return a == ButtonAction::Pi || a == ButtonAction::E;
+        return a == ButtonAction::Clear || a == ButtonAction::UnaryMinus ||
+               a == ButtonAction::LParen || is_binary_operator(a);
     };
 
-    auto is_prefix_function = [](ButtonAction a)
+    auto get_open_parens = [&]()
     {
-        return a == ButtonAction::Sin || a == ButtonAction::Cos ||
-               a == ButtonAction::Tan || a == ButtonAction::Sqrt ||
-               a == ButtonAction::Ln || a == ButtonAction::Log;
+        int count = 0;
+        for (auto a : actionSequence)
+        {
+            if (a == ButtonAction::LParen)
+                count++;
+            else if (a == ButtonAction::RParen)
+                count--;
+        }
+        return count;
     };
 
     ButtonAction last = actionSequence.empty() ? ButtonAction::Clear : actionSequence.back();
+
+    bool state_changed = false;
+
+    auto append = [&](ButtonAction a)
+    {
+        actionSequence.emplace_back(a);
+        state_changed = true;
+    };
 
     switch (act)
     {
@@ -182,9 +214,8 @@ void AppState::buttons_handler(ButtonAction act)
     case ButtonAction::Digit7:
     case ButtonAction::Digit8:
     case ButtonAction::Digit9:
-        if (last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
-            break;
-        actionSequence.emplace_back(act);
+        if (last != ButtonAction::RParen && !is_constant(last) && !is_postfix_operator(last))
+            append(act);
         break;
 
     case ButtonAction::Dot:
@@ -198,53 +229,39 @@ void AppState::buttons_handler(ButtonAction act)
                     has_dot = true;
                     break;
                 }
-
                 if (!is_digit(*it))
                     break;
             }
-
             if (!has_dot)
-                actionSequence.emplace_back(act);
+                append(act);
         }
         break;
 
     case ButtonAction::LParen:
-        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::UnaryMinus || is_binary_operator(last) ||
-            last == ButtonAction::LParen || is_prefix_function(last))
-            actionSequence.emplace_back(act);
+        if (is_value_start(last) || is_prefix_function(last))
+            append(act);
         break;
 
     case ButtonAction::RParen:
-        if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
-        {
-            int open_parens = 0;
-            for (auto a : actionSequence)
-            {
-                if (a == ButtonAction::LParen)
-                    open_parens++;
-                if (a == ButtonAction::RParen)
-                    open_parens--;
-            }
-
-            if (open_parens > 0)
-                actionSequence.emplace_back(act);
-        }
+        if (can_append_operator(last) && get_open_parens() > 0)
+            append(act);
         break;
 
     case ButtonAction::UnaryMinus:
     case ButtonAction::Sub:
-        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::LParen)
-            actionSequence.emplace_back(ButtonAction::UnaryMinus);
-        else if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
-            actionSequence.emplace_back(ButtonAction::Sub);
+        if (is_value_start(last))
+            append(ButtonAction::UnaryMinus);
+        else if (can_append_operator(last))
+            append(ButtonAction::Sub);
         break;
 
     case ButtonAction::Add:
     case ButtonAction::Mul:
     case ButtonAction::Div:
     case ButtonAction::Pow:
-        if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
-            actionSequence.emplace_back(act);
+    case ButtonAction::Percent:
+        if (can_append_operator(last))
+            append(act);
         break;
 
     case ButtonAction::Sin:
@@ -253,37 +270,38 @@ void AppState::buttons_handler(ButtonAction act)
     case ButtonAction::Sqrt:
     case ButtonAction::Ln:
     case ButtonAction::Log:
-        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::UnaryMinus || is_binary_operator(last) || last == ButtonAction::LParen)
+        if (is_value_start(last))
         {
-            actionSequence.emplace_back(act);
-            actionSequence.emplace_back(ButtonAction::LParen);
+            append(act);
+            append(ButtonAction::LParen);
         }
-        break;
-
-    case ButtonAction::Percent:
-        if (is_digit(last) || last == ButtonAction::RParen || is_constant(last) || is_postfix_operator(last))
-            actionSequence.emplace_back(act);
         break;
 
     case ButtonAction::Pi:
     case ButtonAction::E:
-        if (actionSequence.empty() || last == ButtonAction::Clear || last == ButtonAction::UnaryMinus || is_binary_operator(last) || last == ButtonAction::LParen)
-            actionSequence.emplace_back(act);
+        if (is_value_start(last))
+            append(act);
         break;
 
     case ButtonAction::Clear:
-        actionSequence.emplace_back(act);
+        append(act);
         break;
 
     case ButtonAction::AllClear:
         this->all_clear();
+        state_changed = true;
         break;
+
     case ButtonAction::ClearEntry:
         this->clear_entry();
+        state_changed = true;
         break;
 
     case ButtonAction::Equals:
     {
+        if (actionSequence.empty() || last == ButtonAction::Clear)
+            break;
+
         bool ends_with_invalid_token =
             is_binary_operator(last) ||
             last == ButtonAction::LParen ||
@@ -291,20 +309,15 @@ void AppState::buttons_handler(ButtonAction act)
             last == ButtonAction::UnaryMinus ||
             is_prefix_function(last);
 
-        int open_parens_count = 0;
-        for (auto act : this->actionSequence)
+        if (!ends_with_invalid_token && get_open_parens() == 0)
         {
-            if (act == ButtonAction::LParen)
-                open_parens_count++;
-            else if (act == ButtonAction::RParen)
-                open_parens_count--;
-        }
-        bool parens_balanced = (open_parens_count == 0);
-
-        if (!ends_with_invalid_token && parens_balanced)
             this->eval();
+            state_changed = true;
+        }
         break;
     }
     }
-    this->form_input_text();
+
+    if (state_changed)
+        this->form_input_text();
 }
