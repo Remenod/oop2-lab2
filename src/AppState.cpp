@@ -96,7 +96,7 @@ void AppState::form_input_text(void)
         {ButtonAction::Mul, {" * ", " * "}},
         {ButtonAction::Div, {" / ", " / "}},
         {ButtonAction::Percent, {"%", "/100"}},
-        {ButtonAction::UnaryMinus, {" -", " -"}},
+        {ButtonAction::UnaryMinus, {"-", "-"}},
         {ButtonAction::LParen, {"(", "("}},
         {ButtonAction::RParen, {")", ")"}},
 
