@@ -56,7 +56,7 @@ struct AppState
                 {" % ", ButtonAction::Percent},
                 {" C ", ButtonAction::Clear},
                 {" CE", ButtonAction::ClearEntry},
-                {" AC", ButtonAction::AllClear} //
+                {" AC", ButtonAction::AllClear},
             },
             {
                 {" e ", ButtonAction::E},
@@ -64,7 +64,7 @@ struct AppState
                 {" 7 ", ButtonAction::Digit7},
                 {" 8 ", ButtonAction::Digit8},
                 {" 9 ", ButtonAction::Digit9},
-                {" / ", ButtonAction::Div} //
+                {" / ", ButtonAction::Div},
             },
             {
                 {"sin", ButtonAction::Sin},
@@ -72,7 +72,7 @@ struct AppState
                 {" 4 ", ButtonAction::Digit4},
                 {" 5 ", ButtonAction::Digit5},
                 {" 6 ", ButtonAction::Digit6},
-                {" * ", ButtonAction::Mul} //
+                {" * ", ButtonAction::Mul},
             },
             {
                 {"cos", ButtonAction::Cos},
@@ -80,7 +80,7 @@ struct AppState
                 {" 1 ", ButtonAction::Digit1},
                 {" 2 ", ButtonAction::Digit2},
                 {" 3 ", ButtonAction::Digit3},
-                {" - ", ButtonAction::Sub} //
+                {" - ", ButtonAction::Sub},
             },
             {
                 {"tan", ButtonAction::Tan},
@@ -88,8 +88,8 @@ struct AppState
                 {" 0 ", ButtonAction::Digit0},
                 {" . ", ButtonAction::Dot},
                 {" = ", ButtonAction::Equals},
-                {" + ", ButtonAction::Add} //
-            } //
+                {" + ", ButtonAction::Add},
+            },
     };
 
     std::string input_text;
