@@ -161,6 +161,12 @@ void AppState::clear_entry()
         tokens.pop_back(); // remove '('
     }
     tokens.pop_back();
+
+    if (!tokens.empty() && tokens.back().kind == TK::Number)
+    {
+        num_buffer = tokens.back().display;
+        tokens.pop_back();
+    }
 }
 
 // ── main button handler ───────────────────────────────────────────────────────
@@ -398,7 +404,6 @@ void AppState::button_handler(ButtonAction act)
     case ButtonAction::Equals:
         if (can_op && open_parens() == 0)
         {
-            finalize_number();
             this->eval();
             state_changed = true;
         }
