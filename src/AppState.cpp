@@ -67,7 +67,8 @@ bool AppState::can_append_op() const
     auto lk = last_kind();
     if (!lk)
         return false;
-    return *lk == TK::Number || *lk == TK::RParen || *lk == TK::Constant || *lk == TK::Percent;
+    return *lk == TK::Number || *lk == TK::RParen ||
+           *lk == TK::Constant || *lk == TK::Percent;
 }
 
 int AppState::open_parens() const
@@ -142,9 +143,20 @@ void AppState::clear_entry()
     if (tokens.empty())
         return;
 
+    // restore a finalized Number token back into the editable buffer
+    if (tokens.back().kind == TK::Number)
+    {
+        num_buffer = tokens.back().display; // .display == .func for plain numbers
+        tokens.pop_back();
+        num_buffer.pop_back(); // remove the last digit
+        return;
+    }
+
     // A Function token is always followed immediately by an auto-inserted LParen.
     // Remove both together so we never leave a dangling "sin" with no "(".
-    if (tokens.back().kind == TK::LParen && tokens.size() >= 2 && tokens[tokens.size() - 2].kind == TK::Function)
+    if (tokens.back().kind == TK::LParen &&
+        tokens.size() >= 2 &&
+        tokens[tokens.size() - 2].kind == TK::Function)
     {
         tokens.pop_back(); // remove '('
     }
@@ -157,15 +169,48 @@ void AppState::button_handler(ButtonAction act)
 {
     bool state_changed = false;
 
-    // Snapshot context before any mutation.
     const bool val_start = is_value_start();
     const bool can_op = can_append_op();
 
-    // Shorthand: push a token and mark the state as changed.
     auto push = [&](TK kind, std::string_view disp, std::string_view fn)
     {
         tokens.push_back({kind, std::string(disp), std::string(fn)});
         state_changed = true;
+    };
+
+    auto implicit_mul = [&]()
+    {
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, " × ", " * ");
+        }
+    };
+
+    auto ensure_val_start = [&]() -> bool
+    {
+        if (val_start)
+            return true;
+        if (can_op)
+        {
+            implicit_mul();
+            return true;
+        }
+        return false;
+    };
+
+    auto push_or_replace_binary = [&](std::string_view disp, std::string_view fn)
+    {
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, disp, fn);
+        }
+        else if (!tokens.empty() && tokens.back().kind == TK::BinaryOp)
+        {
+            tokens.back() = {TK::BinaryOp, std::string(disp), std::string(fn)};
+            state_changed = true;
+        }
     };
 
     switch (act)
@@ -182,17 +227,24 @@ void AppState::button_handler(ButtonAction act)
     case ButtonAction::Digit8:
     case ButtonAction::Digit9:
     {
-        // A digit may be typed only at the start of a value or while
-        // we are already building a number.
-        if (num_buffer.empty() && !val_start)
-            break;
-
-        // Prevent leading zeros: "0" + any digit = illegal (but "0." is fine,
-        // handled by the Dot case).
-        if (num_buffer == "0")
-            break;
-
         char ch = '0' + (static_cast<int>(act) - static_cast<int>(ButtonAction::Digit0));
+
+        // If no number is being built and we are not at a value-start position,
+        // try to auto-insert multiplication (e.g. the user typed "5" then "3").
+        if (num_buffer.empty() && !val_start)
+        {
+            if (!can_op)
+                break;
+            implicit_mul(); // inserts "×"; now we are effectively at val_start
+        }
+
+        if (num_buffer == "0")
+        {
+            if (ch == '0')
+                break;          // "00" → still "0", nothing to do
+            num_buffer.clear(); // drop the leading zero
+        }
+
         num_buffer += ch;
         state_changed = true;
         break;
@@ -217,11 +269,8 @@ void AppState::button_handler(ButtonAction act)
 
     // ── parentheses ───────────────────────────────────────────────────────────
     case ButtonAction::LParen:
-        if (val_start)
-        {
-            finalize_number(); // safety; buffer is empty when val_start is true
+        if (ensure_val_start())
             push(TK::LParen, "(", "(");
-        }
         break;
 
     case ButtonAction::RParen:
@@ -234,32 +283,16 @@ void AppState::button_handler(ButtonAction act)
 
     // ── binary operators ──────────────────────────────────────────────────────
     case ButtonAction::Add:
-        if (can_op)
-        {
-            finalize_number();
-            push(TK::BinaryOp, " + ", " + ");
-        }
+        push_or_replace_binary(" + ", " + ");
         break;
     case ButtonAction::Mul:
-        if (can_op)
-        {
-            finalize_number();
-            push(TK::BinaryOp, " * ", " * ");
-        }
+        push_or_replace_binary(" × ", " * ");
         break;
     case ButtonAction::Div:
-        if (can_op)
-        {
-            finalize_number();
-            push(TK::BinaryOp, " / ", " / ");
-        }
+        push_or_replace_binary(" ÷ ", " / ");
         break;
     case ButtonAction::Pow:
-        if (can_op)
-        {
-            finalize_number();
-            push(TK::BinaryOp, "^", "^");
-        }
+        push_or_replace_binary("^", "^");
         break;
 
     // ── subtract / unary-minus ────────────────────────────────────────────────
@@ -274,6 +307,11 @@ void AppState::button_handler(ButtonAction act)
             finalize_number();
             push(TK::BinaryOp, " - ", " - ");
         }
+        else if (!tokens.empty() && tokens.back().kind == TK::BinaryOp)
+        {
+            tokens.back() = {TK::BinaryOp, " - ", " - "};
+            state_changed = true;
+        }
         break;
 
     // ── percent (postfix) ─────────────────────────────────────────────────────
@@ -287,42 +325,42 @@ void AppState::button_handler(ButtonAction act)
 
     // ── prefix functions ──────────────────────────────────────────────────────
     case ButtonAction::Sin:
-        if (val_start)
+        if (ensure_val_start())
         {
             push(TK::Function, "sin", "sin");
             push(TK::LParen, "(", "(");
         }
         break;
     case ButtonAction::Cos:
-        if (val_start)
+        if (ensure_val_start())
         {
             push(TK::Function, "cos", "cos");
             push(TK::LParen, "(", "(");
         }
         break;
     case ButtonAction::Tan:
-        if (val_start)
+        if (ensure_val_start())
         {
             push(TK::Function, "tan", "tan");
             push(TK::LParen, "(", "(");
         }
         break;
     case ButtonAction::Ln:
-        if (val_start)
+        if (ensure_val_start())
         {
             push(TK::Function, "ln", "ln");
             push(TK::LParen, "(", "(");
         }
         break;
     case ButtonAction::Log:
-        if (val_start)
+        if (ensure_val_start())
         {
             push(TK::Function, "log", "log");
             push(TK::LParen, "(", "(");
         }
         break;
     case ButtonAction::Sqrt:
-        if (val_start)
+        if (ensure_val_start())
         {
             push(TK::Function, "√", "sqrt");
             push(TK::LParen, "(", "(");
@@ -331,16 +369,12 @@ void AppState::button_handler(ButtonAction act)
 
     // ── constants ─────────────────────────────────────────────────────────────
     case ButtonAction::Pi:
-        if (val_start)
-        {
+        if (ensure_val_start())
             push(TK::Constant, "π", "pi");
-        }
         break;
     case ButtonAction::E:
-        if (val_start)
-        {
+        if (ensure_val_start())
             push(TK::Constant, "e", "e");
-        }
         break;
 
     // ── clear operations ──────────────────────────────────────────────────────
