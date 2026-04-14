@@ -43,6 +43,8 @@ static std::string double_to_string(double value, int precision = 6)
     return s;
 }
 
+// ── query helpers ─────────────────────────────────────────────────────────────
+
 std::optional<AppState::TK> AppState::last_kind() const
 {
     if (!num_buffer.empty())
@@ -81,6 +83,8 @@ int AppState::open_parens() const
     return n;
 }
 
+// ── mutation helpers ──────────────────────────────────────────────────────────
+
 void AppState::finalize_number()
 {
     if (!num_buffer.empty())
@@ -105,8 +109,6 @@ void AppState::form_input_text()
 
 void AppState::eval()
 {
-    // Build the expression directly from the token list + any remaining buffer
-    // so we never depend on func_text being already up-to-date.
     std::string expr;
     expr.reserve(tokens.size() * 3 + num_buffer.size());
     for (const auto &t : tokens)
@@ -126,6 +128,8 @@ void AppState::all_clear()
     result_text = "0";
 }
 
+// ── clear entry ───────────────────────────────────────────────────────────────
+
 void AppState::clear_entry()
 {
     if (!num_buffer.empty())
@@ -144,6 +148,8 @@ void AppState::clear_entry()
     }
     tokens.pop_back();
 }
+
+// ── main button handler ───────────────────────────────────────────────────────
 
 void AppState::button_handler(ButtonAction act)
 {
@@ -194,7 +200,6 @@ void AppState::button_handler(ButtonAction act)
     case ButtonAction::Dot:
         if (!num_buffer.empty())
         {
-            // Only one dot per number.
             if (num_buffer.find('.') == std::string::npos)
             {
                 num_buffer += '.';
@@ -203,8 +208,7 @@ void AppState::button_handler(ButtonAction act)
         }
         else if (val_start)
         {
-            // "." at the start of a value → auto-prefix with 0.
-            num_buffer = "0.";
+            num_buffer = "0."; // auto-prefix: "." → "0."
             state_changed = true;
         }
         break;
