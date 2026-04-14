@@ -4,6 +4,7 @@
 #include <functional>
 #include <iomanip>
 #include <sstream>
+#include <cmath>
 
 static std::function<double()> compile_expr(const std::string &expr, int &err)
 {
@@ -23,6 +24,11 @@ static std::function<double()> compile_expr(const std::string &expr, int &err)
 
 static std::string double_to_string(double value, int precision = 6)
 {
+    if (std::isinf(value))
+        return value > 0 ? "∞" : "-∞";
+    if (std::isnan(value))
+        return "Error";
+
     std::ostringstream oss;
     oss << std::setprecision(precision) << std::noshowpoint << value;
     std::string s = oss.str();
