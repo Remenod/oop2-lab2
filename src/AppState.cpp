@@ -22,7 +22,7 @@ static std::function<double()> compile_expr(const std::string &expr, int &err)
     };
 }
 
-static std::string double_to_string(double value, int precision = 6)
+static std::string double_to_string(double value, int precision = 10)
 {
     if (std::isinf(value))
         return value > 0 ? "∞" : "-∞";
