@@ -7,9 +7,7 @@
 
 static std::function<double(void)> get_func(const std::string &expr, int &err)
 {
-    auto te_x = std::make_shared<double>(0);
-
-    te_expr *e_raw = te_compile(expr.c_str(), {}, 1, &err);
+    te_expr *e_raw = te_compile(expr.c_str(), {}, 0, &err);
 
     if (err)
         return {};
