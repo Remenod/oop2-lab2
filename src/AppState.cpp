@@ -119,6 +119,8 @@ void AppState::eval()
     auto fn = compile_expr(expr, err);
     if (!err)
         result_text = double_to_string(fn());
+    else
+        result_text = "Error";
 }
 
 void AppState::all_clear()
