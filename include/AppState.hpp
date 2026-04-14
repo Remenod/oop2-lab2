@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 
 enum class ButtonAction
 {
@@ -96,13 +97,11 @@ struct AppState
     std::string result_text;
     std::string func_text;
 
-    std::vector<ButtonAction> actionSequence;
-
-    AppState() : input_text(""), result_text("0"), func_text("")
+    AppState() : result_text("0")
     {
         input_text.reserve(256);
         result_text.reserve(256);
-        result_text.reserve(256);
+        func_text.reserve(256);
     }
 
     void button_handler(ButtonAction btn);
@@ -110,4 +109,34 @@ struct AppState
     void form_input_text(void);
     void all_clear(void);
     void clear_entry(void);
+
+private:
+    struct TokenEntry
+    {
+        enum class Kind
+        {
+            Number,
+            BinaryOp,
+            UnaryMinus,
+            Function,
+            LParen,
+            RParen,
+            Constant,
+            Percent
+        };
+        Kind kind;
+        std::string display; // shown to the user
+        std::string func;    // passed to tinyexpr
+    };
+    using TK = TokenEntry::Kind;
+
+    std::vector<TokenEntry> tokens;
+    std::string num_buffer; // digits being typed right now
+
+    // helpers
+    std::optional<TK> last_kind() const;
+    bool is_value_start() const; // empty / after op / after '('
+    bool can_append_op() const;  // after number / ')' / constant / '%'
+    int open_parens() const;
+    void finalize_number(); // flush num_buffer -> tokens
 };

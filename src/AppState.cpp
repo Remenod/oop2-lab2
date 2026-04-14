@@ -2,10 +2,10 @@
 #include "tinyexpr.h"
 #include <memory>
 #include <functional>
-#include <algorithm>
 #include <iomanip>
+#include <sstream>
 
-static std::function<double(void)> get_func(const std::string &expr, int &err)
+static std::function<double()> compile_expr(const std::string &expr, int &err)
 {
     te_expr *e_raw = te_compile(expr.c_str(), {}, 0, &err);
 
@@ -21,7 +21,7 @@ static std::function<double(void)> get_func(const std::string &expr, int &err)
     };
 }
 
-static std::string doubleToString(double value, int precision = 6)
+static std::string double_to_string(double value, int precision = 6)
 {
     std::ostringstream oss;
     oss << std::setprecision(precision) << std::noshowpoint << value;
@@ -29,7 +29,7 @@ static std::string doubleToString(double value, int precision = 6)
 
     if (s.find('.') != std::string::npos)
     {
-        s.erase(s.find_last_not_of('0') + 1, std::string::npos);
+        s.erase(s.find_last_not_of('0') + 1);
         if (s.back() == '.')
             s.pop_back();
     }
@@ -37,167 +37,126 @@ static std::string doubleToString(double value, int precision = 6)
     return s;
 }
 
-void AppState::eval(void)
+std::optional<AppState::TK> AppState::last_kind() const
 {
-    int func_err;
-    auto func = get_func(this->func_text, func_err);
-    if (!func_err)
-        this->result_text = doubleToString(func());
-    else
+    if (!num_buffer.empty())
+        return TK::Number;
+    if (tokens.empty())
+        return std::nullopt;
+    return tokens.back().kind;
+}
+
+bool AppState::is_value_start() const
+{
+    auto lk = last_kind();
+    if (!lk)
+        return true; // expression is empty
+    return *lk == TK::BinaryOp || *lk == TK::UnaryMinus || *lk == TK::LParen;
+}
+
+bool AppState::can_append_op() const
+{
+    auto lk = last_kind();
+    if (!lk)
+        return false;
+    return *lk == TK::Number || *lk == TK::RParen || *lk == TK::Constant || *lk == TK::Percent;
+}
+
+int AppState::open_parens() const
+{
+    int n = 0;
+    for (const auto &t : tokens)
     {
-        // idk
+        if (t.kind == TK::LParen)
+            ++n;
+        else if (t.kind == TK::RParen)
+            --n;
+    }
+    return n;
+}
+
+void AppState::finalize_number()
+{
+    if (!num_buffer.empty())
+    {
+        tokens.push_back({TK::Number, num_buffer, num_buffer});
+        num_buffer.clear();
     }
 }
 
-void AppState::form_input_text(void)
+void AppState::form_input_text()
 {
-    this->input_text.clear();
-    this->func_text.clear();
-
-    this->input_text.reserve(this->actionSequence.size() * 2);
-    this->func_text.reserve(this->actionSequence.size() * 3);
-
-    auto last_ce = std::find(
-        this->actionSequence.rbegin(),
-        this->actionSequence.rend(),
-        ButtonAction::ClearEntry);
-
-    auto start_iter = (last_ce != this->actionSequence.rend())
-                          ? std::next(last_ce.base())
-                          : this->actionSequence.begin();
-
-    struct TokenInfo
+    input_text.clear();
+    func_text.clear();
+    for (const auto &t : tokens)
     {
-        std::string_view input;
-        std::string_view func;
-    };
-
-    static const std::unordered_map<ButtonAction, TokenInfo> token_map = {
-        {ButtonAction::Digit0, {"0", "0"}},
-        {ButtonAction::Digit1, {"1", "1"}},
-        {ButtonAction::Digit2, {"2", "2"}},
-        {ButtonAction::Digit3, {"3", "3"}},
-        {ButtonAction::Digit4, {"4", "4"}},
-        {ButtonAction::Digit5, {"5", "5"}},
-        {ButtonAction::Digit6, {"6", "6"}},
-        {ButtonAction::Digit7, {"7", "7"}},
-        {ButtonAction::Digit8, {"8", "8"}},
-        {ButtonAction::Digit9, {"9", "9"}},
-
-        {ButtonAction::Dot, {".", "."}},
-        {ButtonAction::Add, {" + ", " + "}},
-        {ButtonAction::Sub, {" - ", " - "}},
-        {ButtonAction::Mul, {" * ", " * "}},
-        {ButtonAction::Div, {" / ", " / "}},
-        {ButtonAction::Percent, {"%", "/100"}},
-        {ButtonAction::UnaryMinus, {"-", "-"}},
-        {ButtonAction::LParen, {"(", "("}},
-        {ButtonAction::RParen, {")", ")"}},
-
-        {ButtonAction::Cos, {"cos", "cos"}},
-        {ButtonAction::Sin, {"sin", "sin"}},
-        {ButtonAction::Tan, {"tan", "tan"}},
-        {ButtonAction::Ln, {"ln", "ln"}},
-        {ButtonAction::Log, {"log", "log"}},
-        {ButtonAction::Sqrt, {"√", "sqrt"}},
-        {ButtonAction::Pow, {"^", "^"}},
-        {ButtonAction::Pi, {"π", "pi"}},
-        {ButtonAction::E, {"e", "e"}}};
-
-    for (auto iter = start_iter; iter != this->actionSequence.end(); ++iter)
-    {
-        if (*iter == ButtonAction::Clear)
-        {
-            this->input_text.clear();
-            this->func_text.clear();
-            continue;
-        }
-
-        auto match = token_map.find(*iter);
-        if (match != token_map.end())
-        {
-            this->input_text += match->second.input;
-            this->func_text += match->second.func;
-        }
+        input_text += t.display;
+        func_text += t.func;
     }
+    input_text += num_buffer;
+    func_text += num_buffer;
 }
-void AppState::all_clear(void)
+
+void AppState::eval()
 {
-    this->result_text = "0";
-    this->actionSequence.clear();
+    // Build the expression directly from the token list + any remaining buffer
+    // so we never depend on func_text being already up-to-date.
+    std::string expr;
+    expr.reserve(tokens.size() * 3 + num_buffer.size());
+    for (const auto &t : tokens)
+        expr += t.func;
+    expr += num_buffer;
+
+    int err = 0;
+    auto fn = compile_expr(expr, err);
+    if (!err)
+        result_text = double_to_string(fn());
 }
-void AppState::clear_entry(void)
+
+void AppState::all_clear()
 {
-    if (!this->actionSequence.empty() && this->actionSequence.back() != ButtonAction::Clear)
-        this->actionSequence.pop_back();
+    tokens.clear();
+    num_buffer.clear();
+    result_text = "0";
+}
+
+void AppState::clear_entry()
+{
+    if (!num_buffer.empty())
+    {
+        num_buffer.pop_back();
+        return;
+    }
+    if (tokens.empty())
+        return;
+
+    // A Function token is always followed immediately by an auto-inserted LParen.
+    // Remove both together so we never leave a dangling "sin" with no "(".
+    if (tokens.back().kind == TK::LParen && tokens.size() >= 2 && tokens[tokens.size() - 2].kind == TK::Function)
+    {
+        tokens.pop_back(); // remove '('
+    }
+    tokens.pop_back();
 }
 
 void AppState::button_handler(ButtonAction act)
 {
-    static auto is_digit = [](ButtonAction a)
-    { return a >= ButtonAction::Digit0 && a <= ButtonAction::Digit9; };
-
-    static auto is_binary_operator = [](ButtonAction a)
-    {
-        return a == ButtonAction::Add ||
-               a == ButtonAction::Sub ||
-               a == ButtonAction::Mul ||
-               a == ButtonAction::Div ||
-               a == ButtonAction::Pow;
-    };
-
-    static auto is_postfix_operator = [](ButtonAction a)
-    { return a == ButtonAction::Percent; };
-
-    static auto is_constant = [](ButtonAction a)
-    { return a == ButtonAction::Pi || a == ButtonAction::E; };
-
-    static auto is_prefix_function = [](ButtonAction a)
-    {
-        return a == ButtonAction::Ln ||
-               a == ButtonAction::Log ||
-               a == ButtonAction::Sin ||
-               a == ButtonAction::Cos ||
-               a == ButtonAction::Tan ||
-               a == ButtonAction::Sqrt;
-    };
-
-    auto can_append_operator = [&](ButtonAction a)
-    {
-        return is_digit(a) || a == ButtonAction::RParen || is_constant(a) || is_postfix_operator(a);
-    };
-
-    auto is_value_start = [&](ButtonAction a)
-    {
-        return a == ButtonAction::Clear || a == ButtonAction::UnaryMinus ||
-               a == ButtonAction::LParen || is_binary_operator(a);
-    };
-
-    auto get_open_parens = [&]()
-    {
-        int count = 0;
-        for (auto a : actionSequence)
-        {
-            if (a == ButtonAction::LParen)
-                count++;
-            else if (a == ButtonAction::RParen)
-                count--;
-        }
-        return count;
-    };
-
-    ButtonAction last = actionSequence.empty() ? ButtonAction::Clear : actionSequence.back();
-
     bool state_changed = false;
 
-    auto append = [&](ButtonAction a)
+    // Snapshot context before any mutation.
+    const bool val_start = is_value_start();
+    const bool can_op = can_append_op();
+
+    // Shorthand: push a token and mark the state as changed.
+    auto push = [&](TK kind, std::string_view disp, std::string_view fn)
     {
-        actionSequence.emplace_back(a);
+        tokens.push_back({kind, std::string(disp), std::string(fn)});
         state_changed = true;
     };
 
     switch (act)
     {
+    // ── digits ───────────────────────────────────────────────────────────────
     case ButtonAction::Digit0:
     case ButtonAction::Digit1:
     case ButtonAction::Digit2:
@@ -208,80 +167,175 @@ void AppState::button_handler(ButtonAction act)
     case ButtonAction::Digit7:
     case ButtonAction::Digit8:
     case ButtonAction::Digit9:
-        if (last != ButtonAction::RParen &&
-            !is_constant(last) &&
-            !is_postfix_operator(last) &&
-            !is_prefix_function(last))
-            append(act);
-        break;
+    {
+        // A digit may be typed only at the start of a value or while
+        // we are already building a number.
+        if (num_buffer.empty() && !val_start)
+            break;
 
+        // Prevent leading zeros: "0" + any digit = illegal (but "0." is fine,
+        // handled by the Dot case).
+        if (num_buffer == "0")
+            break;
+
+        char ch = '0' + (static_cast<int>(act) - static_cast<int>(ButtonAction::Digit0));
+        num_buffer += ch;
+        state_changed = true;
+        break;
+    }
+
+    // ── decimal dot ──────────────────────────────────────────────────────────
     case ButtonAction::Dot:
-        if (is_digit(last))
+        if (!num_buffer.empty())
         {
-            bool has_dot = false;
-            for (auto it = actionSequence.rbegin(); it != actionSequence.rend(); ++it)
+            // Only one dot per number.
+            if (num_buffer.find('.') == std::string::npos)
             {
-                if (*it == ButtonAction::Dot)
-                {
-                    has_dot = true;
-                    break;
-                }
-                if (!is_digit(*it))
-                    break;
+                num_buffer += '.';
+                state_changed = true;
             }
-            if (!has_dot)
-                append(act);
+        }
+        else if (val_start)
+        {
+            // "." at the start of a value → auto-prefix with 0.
+            num_buffer = "0.";
+            state_changed = true;
         }
         break;
 
+    // ── parentheses ───────────────────────────────────────────────────────────
     case ButtonAction::LParen:
-        if (is_value_start(last) || is_prefix_function(last))
-            append(act);
+        if (val_start)
+        {
+            finalize_number(); // safety; buffer is empty when val_start is true
+            push(TK::LParen, "(", "(");
+        }
         break;
 
     case ButtonAction::RParen:
-        if (can_append_operator(last) && get_open_parens() > 0)
-            append(act);
-        break;
-
-    case ButtonAction::UnaryMinus:
-    case ButtonAction::Sub:
-        if (is_value_start(last))
-            append(ButtonAction::UnaryMinus);
-        else if (can_append_operator(last))
-            append(ButtonAction::Sub);
-        break;
-
-    case ButtonAction::Add:
-    case ButtonAction::Mul:
-    case ButtonAction::Div:
-    case ButtonAction::Pow:
-    case ButtonAction::Percent:
-        if (can_append_operator(last))
-            append(act);
-        break;
-
-    case ButtonAction::Sin:
-    case ButtonAction::Cos:
-    case ButtonAction::Tan:
-    case ButtonAction::Sqrt:
-    case ButtonAction::Ln:
-    case ButtonAction::Log:
-        if (is_value_start(last))
+        if (can_op && open_parens() > 0)
         {
-            append(act);
-            append(ButtonAction::LParen);
+            finalize_number();
+            push(TK::RParen, ")", ")");
         }
         break;
 
-    case ButtonAction::Pi:
-    case ButtonAction::E:
-        if (is_value_start(last))
-            append(act);
+    // ── binary operators ──────────────────────────────────────────────────────
+    case ButtonAction::Add:
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, " + ", " + ");
+        }
+        break;
+    case ButtonAction::Mul:
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, " * ", " * ");
+        }
+        break;
+    case ButtonAction::Div:
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, " / ", " / ");
+        }
+        break;
+    case ButtonAction::Pow:
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, "^", "^");
+        }
         break;
 
+    // ── subtract / unary-minus ────────────────────────────────────────────────
+    case ButtonAction::Sub:
+    case ButtonAction::UnaryMinus:
+        if (val_start)
+        {
+            push(TK::UnaryMinus, "-", "-");
+        }
+        else if (can_op)
+        {
+            finalize_number();
+            push(TK::BinaryOp, " - ", " - ");
+        }
+        break;
+
+    // ── percent (postfix) ─────────────────────────────────────────────────────
+    case ButtonAction::Percent:
+        if (can_op)
+        {
+            finalize_number();
+            push(TK::Percent, "%", "/100");
+        }
+        break;
+
+    // ── prefix functions ──────────────────────────────────────────────────────
+    case ButtonAction::Sin:
+        if (val_start)
+        {
+            push(TK::Function, "sin", "sin");
+            push(TK::LParen, "(", "(");
+        }
+        break;
+    case ButtonAction::Cos:
+        if (val_start)
+        {
+            push(TK::Function, "cos", "cos");
+            push(TK::LParen, "(", "(");
+        }
+        break;
+    case ButtonAction::Tan:
+        if (val_start)
+        {
+            push(TK::Function, "tan", "tan");
+            push(TK::LParen, "(", "(");
+        }
+        break;
+    case ButtonAction::Ln:
+        if (val_start)
+        {
+            push(TK::Function, "ln", "ln");
+            push(TK::LParen, "(", "(");
+        }
+        break;
+    case ButtonAction::Log:
+        if (val_start)
+        {
+            push(TK::Function, "log", "log");
+            push(TK::LParen, "(", "(");
+        }
+        break;
+    case ButtonAction::Sqrt:
+        if (val_start)
+        {
+            push(TK::Function, "√", "sqrt");
+            push(TK::LParen, "(", "(");
+        }
+        break;
+
+    // ── constants ─────────────────────────────────────────────────────────────
+    case ButtonAction::Pi:
+        if (val_start)
+        {
+            push(TK::Constant, "π", "pi");
+        }
+        break;
+    case ButtonAction::E:
+        if (val_start)
+        {
+            push(TK::Constant, "e", "e");
+        }
+        break;
+
+    // ── clear operations ──────────────────────────────────────────────────────
     case ButtonAction::Clear:
-        append(act);
+        tokens.clear();
+        num_buffer.clear();
+        state_changed = true;
         break;
 
     case ButtonAction::AllClear:
@@ -294,25 +348,15 @@ void AppState::button_handler(ButtonAction act)
         state_changed = true;
         break;
 
+    // ── evaluate ──────────────────────────────────────────────────────────────
     case ButtonAction::Equals:
-    {
-        if (actionSequence.empty() || last == ButtonAction::Clear)
-            break;
-
-        bool ends_with_invalid_token =
-            is_binary_operator(last) ||
-            last == ButtonAction::LParen ||
-            last == ButtonAction::Dot ||
-            last == ButtonAction::UnaryMinus ||
-            is_prefix_function(last);
-
-        if (!ends_with_invalid_token && get_open_parens() == 0)
+        if (can_op && open_parens() == 0)
         {
+            finalize_number();
             this->eval();
             state_changed = true;
         }
         break;
-    }
     }
 
     if (state_changed)
